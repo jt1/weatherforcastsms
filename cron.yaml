@@ -1,0 +1,5 @@
+cron:
+# - description: check if there are weather sms to send
+#   url: /check
+#   schedule: every 1 minutes
+#   timezone: Europe/Warsaw
