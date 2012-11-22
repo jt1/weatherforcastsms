@@ -1,92 +1,90 @@
 #!/usr/bin/env python
 
 import webapp2
+import urllib
 import urllib2
 import logging
-from bs4 import BeautifulSoup
 import datetime
-
+import settings
+from bs4 import BeautifulSoup
+from google.appengine.api import urlfetch
 from google.appengine.ext import db
+from model import Task
 
 
-class SendTask(db.Model):
-    telephone = db.StringProperty()
-    url = db.StringProperty()
-    periodLimit = db.IntegerProperty()
-    sendDateTimeList = db.ListProperty(datetime.datetime)
-    active = db.BooleanProperty()
-
-
-class MainHandler(webapp2.RequestHandler):
+class SendSMS(webapp2.RequestHandler):
     def get(self):
-        url = "http://www.yr.no/place/France/Rh%C3%B4ne-Alpes/Saint-Genis-Pouilly/varsel.xml"
-        soup = BeautifulSoup(urllib2.urlopen(url))
-        logging.info(
-            "Place: " + soup.weatherdata.location.contents[1].contents[0])
-        for i, period in enumerate(soup.find_all('time')):
-            logging.info("--------- Period: " + str(i))
-            logging.info(
-                "Time: " + period.get('from') + " - " + period.get('to'))
-            logging.info("Weather: " + period.symbol.get('name'))
-            logging.info(
-                "Precipitation: " + period.precipitation.get('value') + "mm")
-            logging.info("Wind: " + period.windspeed.get(
-                'mps') + "m/s " + period.winddirection.get('code'))
-            logging.info(
-                "Temperature: " + period.temperature.get('value') + 'C')
-            logging.info("Pressure: " + period.pressure.get('value') + 'hpa')
-        self.response.write('ok')
+        for task in db.GqlQuery("SELECT * FROM Task WHERE sendDateTimeList != NULL"):
+            sendDateTimeToDelete = list()
+            for sendDateTime in task.sendDateTimeList:
+                if sendDateTime < datetime.datetime.now() + datetime.timedelta(hours=1):
+                    if self._sendSMS(self._getSMSText(task.url, task.periods), task.phone):
+                        sendDateTimeToDelete.append(sendDateTime)
+                        self.response.write('SMS sent<br>')
+            task.sendDateTimeList = filter(lambda x: x not in sendDateTimeToDelete, task.sendDateTimeList)
+            task.put()
 
+    def _getSMSText(self, url, userPeriods):
+        xml = BeautifulSoup(urllib2.urlopen(url))
+        text = xml.weatherdata.location.contents[1].contents[0] + ' '
+        for i, period in enumerate(xml.find_all('time'), start=1):
+            if i in userPeriods:
+                text += '{start}-{end} {symbol} {precipitation}mm {wind}m/s {temp}C '.format(start=period.get('from')[8:13], end=period.get('to')[11:13], symbol=period.symbol.get('name'), precipitation=period.precipitation.get('value'), wind=period.windspeed.get('mps'), temp=period.temperature.get('value'))
+        return text
 
-class CheckCron(webapp2.RequestHandler):
-    def get(self):
-        logging.info("ok")
+    def _sendSMS(self, text, phone):
+        logging.info('sending SMS to: {0}, {1} characters, text: {2}'.format(
+            phone, len(text), text))
+        params = {
+            "login": settings.LOGIN,
+            "pass": settings.PASSWORD,
+            "text": text,
+            "recipient": phone,
+            "type": settings.SMS_TYPE
+        }
+        params = urllib.urlencode(params)
+        result = urlfetch.fetch(url=settings.SMS_URL,
+                                payload=params,
+                                method=urlfetch.POST,
+                                headers={'Content-Type': 'application/x-www-form-urlencoded'})
+        logging.info("Result code: {0}, content: {1}".format(result.status_code, result.content))
+        if result.status_code == 200 and result.content.startswith("003"):
+            logging.info('SMS sent')
+            return True
+        logging.info('SMS failed')
+        return False
 
 
 class AddTask(webapp2.RequestHandler):
     def post(self):
-        sendTask = SendTask()
-
-        sendTask.telephone = self.request.get('telephone')
-        sendTask.url = self.request.get('url')
-        sendTask.periodLimit = int(self.request.get('periods'))
-        logging.info(self.request.get('sendDateTimeList').split('\n'))
-        sendTask.sendDateTimeList = [datetime.datetime.strptime(dateString, '%d-%m-%Y %H:%M') for dateString in self.request.get('sendDateTimeList').split('\r\n')]
-        sendTask.active = True
-
-        sendTask.put()
-
-        self.redirect('/list')
+        task = Task(phone=self.request.get('phone'),
+                    url=self.request.get('url'),
+                    periods=map(
+                    int, self.request.get('periods').split(';')),
+                    sendDateTimeList=[datetime.datetime.strptime(dateString, '%d-%m-%Y %H:%M') for dateString in self.request.get('sendDateTimeList').split(';')])
+        task.put()
+        self.redirect('/')
 
 
 class TaskList(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write('<html><body>')
-
-        sendTasks = db.GqlQuery(
-            "SELECT * FROM SendTask WHERE active = TRUE ORDER BY active DESC")
-        self.response.out.write('<b>Active tasks:</b><br>')
-        for task in sendTasks:
-            self.response.out.write('telephone: %s, url: %s, periodLimit: %d, sendDateTimeList: %s, active: %d'
-                                    % (task.telephone, task.url, task.periodLimit, task.sendDateTimeList, task.active))
-            self.response.out.write('<br>')
-        self.response.out.write('<br>')
-        self.response.out.write('<b>New task:</b><br>')
-        self.response.out.write("""
+        self.response.out.write('<html><body><b>All tasks:</b><br>')
+        for task in db.GqlQuery("SELECT * FROM Task"):
+            self.response.out.write('phone: {0}, periods: {1}, sendDateTimeList: {2}, url: {3}<br>'.format(task.phone, task.periods, task.sendDateTimeList, task.url))
+        self.response.out.write("""<br><b>New task:</b><br>
               <form action="/addTask" method="post">
-                <div>Telephone: <input type="text" name="telephone" value="+48123456" ></input></div>
-                <div>URL: <input type="text" name="url" value="http://www.onet.pl"></input></div>
-                <div>Period limit: <input type="text" name="periods" value="3"></input></div>
-                <div>Send DateTime List: <textarea name="sendDateTimeList" rows="10" cols="60">05-06-2012 10:22</textarea></div>
-                <div><input type="submit" value="Add Task"></div>
+                <div>url: <input type="text" name="url" size="80" value="http://www.yr.no/place/France/Rh%C3%B4ne-Alpes/Chamonix/varsel.xml"></input></div>
+                <div>phone: <input type="text" name="phone" value="48123456" ></input></div>
+                <div>periods: <input type="text" name="periods" value="1;2;3"></input></div>
+                <div>send date/time list:</div>
+                <div><textarea name="sendDateTimeList" rows="10" cols="65">""" + (datetime.datetime.now() + datetime.timedelta(hours=1)).strftime("%d-%m-%Y %H:%M") + """</textarea></div>
+                <div><input type="submit" value="Add task"></div>
               </form>
             </body>
           </html>""")
 
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler),
-    ('/list', TaskList),
-    ('/addTask', AddTask),
-    ('/check', CheckCron)
-], debug=True)
+    ('/', TaskList),
+    ('/send', SendSMS),
+    ('/addTask', AddTask)])

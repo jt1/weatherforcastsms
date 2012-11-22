@@ -1,5 +1,5 @@
 cron:
-# - description: check if there are weather sms to send
-#   url: /check
-#   schedule: every 1 minutes
-#   timezone: Europe/Warsaw
+- description: send sms if there are any pending
+  url: /send
+  schedule: every 1 minutes
+  timezone: Europe/Warsaw
