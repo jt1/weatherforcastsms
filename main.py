@@ -30,7 +30,7 @@ class SendSMS(webapp2.RequestHandler):
         for i, period in enumerate(xml.find_all('time'), start=1):
             if i in userPeriods:
                 text += '{start}-{end} {symbol} {precipitation}mm {wind}m/s {temp}C '.format(start=period.get('from')[8:13], end=period.get('to')[11:13], symbol=period.symbol.get('name'), precipitation=period.precipitation.get('value'), wind=period.windspeed.get('mps'), temp=period.temperature.get('value'))
-        return text
+        return text.encode('latin-1')
 
     def _sendSMS(self, text, phone):
         logging.info('sending SMS to: {0}, {1} characters, text: {2}'.format(
