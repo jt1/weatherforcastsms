@@ -1,4 +1,5 @@
-SMS_URL = "https://www.test.pl/send.php"
-LOGIN = "login"
-PASSWORD ="pass"
-SMS_TYPE = "3"
+
+GSMSERVICE_SMS_URL = "https://api.gsmservice.pl/send.php"
+GSMSERVICE_LOGIN = "login"
+GSMSERVICE_PASSWORD ="password"
+GSMSERVICE_SMS_TYPE = "1"
