@@ -8,8 +8,12 @@ handlers:
 - url: .*
   script: main.app
   login: admin
+
 libraries:
 - name: webapp2
   version: "2.5.1"
 - name: lxml
   version: "2.3"
+
+builtins:
+- admin_redirect: on

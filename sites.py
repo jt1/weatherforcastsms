@@ -1,4 +1,3 @@
-import logging
 import urllib2
 from bs4 import BeautifulSoup
 
@@ -28,7 +27,7 @@ class Yr(WeatherSite):
                                               precipitation=dataPeriods[i].precipitation.get('value'),
                                               wind=dataPeriods[i].windspeed.get('mps'),
                                               temp=dataPeriods[i].temperature.get('value'))
-        return text.encode('latin-1')
+        return text
 
 class Meteoblue(WeatherSite):
     def __init__(self, url, periods):
@@ -48,4 +47,31 @@ class Meteoblue(WeatherSite):
                                               probability=trs[7].find_all("td")[i].string,
                                               wind=trs[5].find_all("td")[i].string,
                                               temp=trs[2].find_all("td")[i].string.split('\t')[0])
-        return text.encode('latin-1')
+        return text
+
+
+class MountainForecast(WeatherSite):
+    def __init__(self, url, periods):
+        super(MountainForecast, self).__init__(url, periods)
+        self.xml = BeautifulSoup(urllib2.urlopen(url))
+        self.periodPattern = '{date}{time} {sybmol} {rain}mm {wind}m/s {temp1}-{temp2}C '
+
+    def generateText(self):
+        text = self.xml.find("nobr").text.split(',')[0] + ' '
+        trs = self.xml.find(class_='forecasts')
+        dates = trs.find(class_="lar hea ").find_all("td")
+        times = trs.find_all(class_="tiny")
+        desc = trs.find_all(class_="weathercell")
+        rains = trs.find_all(class_="rain")
+        winds = trs.find_all(class_="windcell")
+        temps = trs.find_all(class_="temp")
+        dateMod = {'AM': 0, 'PM': 1, 'night': 2}
+        for i in self.periods:
+            text += self.periodPattern.format(date=dates[(i+dateMod[times[0].text])/3].text.split()[0][:3],
+                                              time=times[i].string,
+                                              sybmol=desc[i].img['alt'],
+                                              rain=rains[i].string,
+                                              wind=winds[i].img['alt'].split()[0],
+                                              temp1=temps[i+18].string,
+                                              temp2=temps[i].string)
+        return text
