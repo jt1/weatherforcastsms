@@ -1,5 +1,5 @@
 cron:
 - description: send sms if there are any pending
   url: /send
-  schedule: every 3 minutes
+  schedule: every 4 minutes
   timezone: Europe/Warsaw

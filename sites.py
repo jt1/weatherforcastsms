@@ -54,7 +54,7 @@ class MountainForecast(WeatherSite):
     def __init__(self, url, periods):
         super(MountainForecast, self).__init__(url, periods)
         self.xml = BeautifulSoup(urllib2.urlopen(url))
-        self.periodPattern = '{date}{time} {sybmol} {rain}mm {wind}m/s {temp1}-{temp2}C '
+        self.periodPattern = '{date}{time} {sybmol} {rain}mm {wind}km/h {temp1}-{temp2}C '
 
     def generateText(self):
         text = self.xml.find("nobr").text.split(',')[0] + ' '
