@@ -1,0 +1,48 @@
+​<!DOCTYPE html>
+{% autoescape true %}
+<html>
+<head>
+    <title>Weather Forecast SMS</title>
+</head>
+<body>
+    <b>All tasks:</b><br>
+    {% for task in tasks %}
+        phone: {{ task.phone }}, periods: {{ task.periods }}, sendDateTimeList: {{ task.sendDateTimeList }}, url: {{ task.url }}, smsType: {{ task.smsType }}, smsSender: {{ task.smsSender }} 
+        <br>
+    {% endfor %}
+    <form action="/addURL" method="post">
+        <br><b>New URL:</b><br>
+        <div>URL (yr, meteoblue, mountain-forecast): <input type="text" name="newURL" size="80"></input><input type="submit" value="Add URL">
+    </form>
+    <form action="/addTask" method="post">
+        <br><b>New task:</b><br>
+        <div>sms sender:
+            <select name="smsSender">
+                <option value="gsmservice">GSMService.pl</option>
+            </select>
+        </div>
+        <div>select URL:
+            <select name="url">''')
+            {% for url in urls %}
+                <option value="{{ url.url }}">{{ url.key().id() }} : {{ url.url }}</option>
+            {% endfor %}
+            </select>
+        </div>            
+        <div>phone: <input type="text" name="phone" value="{{ settings.PHONE_DEFAULT }}" ></input></div>
+        <div>sms type:
+            <select name="smsType">
+                <option value="poland">Poland</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div>periods: <input type="text" name="periods" value="0;1;2;3"></input></div>
+        <div>send date/time list (use ';' as a separator):</div>
+        <div><textarea name="sendDateTimeList" rows="10" cols="65">{{ datetime_now }}</textarea></div>
+        <div>
+            <input type="submit" value="Add task">
+            <input type="button" value="Send now" onclick="location.href='/send';">
+        </div>
+  </form>
+</body>
+</html>
+{% endautoescape %}

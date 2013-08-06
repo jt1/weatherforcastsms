@@ -1,12 +1,19 @@
 import webapp2
 import logging
 import settings
+import jinja2
+import utils
+import os
 from pytz.gae import pytz
 from datetime import datetime
 from model import Task, URL
 from sms import GSMService
 from sites import Yr, Meteoblue, MountainForecast
+from email_handler import EmailHandler
 
+JINJA_ENVIRONMENT = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
+    extensions=['jinja2.ext.autoescape'])
 
 class SendSMS(webapp2.RequestHandler):
     def __init__(self, request, response):
@@ -47,14 +54,12 @@ class SendSMS(webapp2.RequestHandler):
 
 class AddTask(webapp2.RequestHandler):
     def post(self):
-        task = Task(phone=self.request.get('phone').strip(),
+        utils.addTask(phone=self.request.get('phone').strip(),
                     url=self.request.get('url').strip(),
-                    periods=map(
-                    int, self.request.get('periods').strip().split(';')),
-                    sendDateTimeList=[datetime.strptime(dateString.strip(), settings.TIMEFORMAT) for dateString in self.request.get('sendDateTimeList').split(';') if dateString.strip()],
+                    periods=self.request.get('periods').strip(),
+                    sendDateTimeList=self.request.get('sendDateTimeList'),
                     smsType=self.request.get('smsType').strip(),
                     smsSender=self.request.get('smsSender').strip())
-        task.put()
         self.redirect('/')
 
 
@@ -67,49 +72,18 @@ class AddURL(webapp2.RequestHandler):
 
 class TaskList(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write('<html><body><b>All tasks:</b><br>')
-        for task in Task.all():
-            self.response.out.write('phone: {}, periods: {}, sendDateTimeList: {}, url: {}, smsType: {}, smsSender: {}<br>'.format(task.phone, task.periods, task.sendDateTimeList, task.url, task.smsType, task.smsSender))
-        self.response.out.write('''
-            <form action="/addURL" method="post">
-                <br><b>New URL:</b><br>
-                <div>URL (yr, meteoblue, mountain-forecast): <input type="text" name="newURL" size="80"></input><input type="submit" value="Add URL">
-            </form>
-            <form action="/addTask" method="post">
-                <br><b>New task:</b><br>
-                <div>sms sender:
-                    <select name="smsSender">
-                        <option value="gsmservice">GSMService.pl</option>
-                    </select>
-                </div>
-                <div>select URL:
-                    <select name="url">''')
-        for url in URL.all():
-            self.response.out.write('<option>%s</option>' % url.url)
-        self.response.out.write('''
-                    </select>
-                </div>            
-                <div>phone: <input type="text" name="phone" value="''' + settings.PHONE_DEFAULT + '''" ></input></div>
-                <div>sms type:
-                    <select name="smsType">
-                        <option value="poland">Poland</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div>periods: <input type="text" name="periods" value="0;1;2;3"></input></div>
-                <div>send date/time list (use ';' as a separator):</div>
-                <div><textarea name="sendDateTimeList" rows="10" cols="65">''' + datetime.now(pytz.timezone(settings.TIMEZONE)).strftime(settings.TIMEFORMAT) + ''';</textarea></div>
-                <div>
-                    <input type="submit" value="Add task">
-                    <input type="button" value="Send now" onclick="location.href='/send';">
-                </div>
-              </form>
-            </body>
-          </html>''')
-
+        template_values = {
+            'tasks': Task.all(),
+            'urls': URL.all(),
+            'settings': settings,
+            'datetime_now': datetime.now(pytz.timezone(settings.TIMEZONE)).strftime(settings.TIMEFORMAT)
+        }
+        template = JINJA_ENVIRONMENT.get_template('templates/index.html')
+        self.response.write(template.render(template_values))
 
 app = webapp2.WSGIApplication([
     ('/', TaskList),
     ('/send', SendSMS),
     ('/addURL', AddURL),
-    ('/addTask', AddTask)])
+    ('/addTask', AddTask),
+    EmailHandler.mapping()])

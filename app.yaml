@@ -5,15 +5,23 @@ api_version: 1
 threadsafe: yes
 
 handlers:
-- url: .*
+- url: /.*
   script: main.app
+  login: admin
+- url: /_ah/mail/.+
+  script: email.app
   login: admin
 
 libraries:
 - name: webapp2
-  version: "2.5.1"
+  version: latest
 - name: lxml
   version: "2.3"
+- name: jinja2
+  version: latest
 
 builtins:
 - admin_redirect: on
+
+inbound_services:
+- mail
