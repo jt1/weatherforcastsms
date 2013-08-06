@@ -2,6 +2,7 @@
 {% autoescape true %}
 <html>
 <head>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
     <title>Weather Forecast SMS</title>
 </head>
 <body>
@@ -41,6 +42,11 @@
         <div>
             <input type="submit" value="Add task">
             <input type="button" value="Send now" onclick="location.href='/send';">
+        </div>
+        <div class="info">
+            You can also add Task by sending email to string@weatherforcastsms.appspotmail.com using following format:<br>
+            phone_number#url_id#periods#dates#sms_type#sms_sender#password <br>
+            Example: 48123123456#39004#1;2;3;4#06-08-2013 13:52#other#gsmservice#password
         </div>
   </form>
 </body>
