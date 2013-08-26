@@ -21,7 +21,7 @@ class GSMService(SenderSMS):
         params = {
             "login": settings.GSMSERVICE_LOGIN,
             "pass": settings.GSMSERVICE_PASSWORD,
-            "text": text,
+            "text": text.encode('ascii', 'replace'),
             "recipient": phone,
             "type": self.smsTypes[smsType],
         }

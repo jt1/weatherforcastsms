@@ -38,7 +38,7 @@ class SendSMS(webapp2.RequestHandler):
         for siteCand in self.sites:
             if siteCand in task.url:
                 site = self.sites[siteCand](task.url, task.periods)
-        text = site.generateText().encode('latin-1', 'ignore')
+        text = site.generateText()
         sender = self.smsSenders[task.smsSender]()
         actionInfo = 'sending SMS to: {}, {} characters, smsType: {}, smsSender: {}, url: {}, '.format(task.phone, len(text), task.smsType, task.smsSender, task.url)
         logging.info(actionInfo)
