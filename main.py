@@ -24,14 +24,12 @@ class SendSMS(webapp2.RequestHandler):
 
     def get(self):
         for task in Task.all():
-            sendDateTimeToDelete = list()
             for sendDateTime in task.sendDateTimeList:
                 try:
                     if self.tz.localize(sendDateTime) < datetime.now(self.tz) and self._sendSMS(task):
-                        sendDateTimeToDelete.append(sendDateTime)
+                        task.sendDateTimeList.remove(sendDateTime)
                 except Exception, e:
                     logging.error(e)
-            task.sendDateTimeList = filter(lambda x: x not in sendDateTimeToDelete, task.sendDateTimeList)
             task.put()
 
     def _sendSMS(self, task):
