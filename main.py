@@ -15,6 +15,7 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
     extensions=['jinja2.ext.autoescape'])
 
+
 class SendSMS(webapp2.RequestHandler):
     def __init__(self, request, response):
         self.initialize(request, response)
