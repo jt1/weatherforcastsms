@@ -18,16 +18,25 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class SendSMS(webapp2.RequestHandler):
     def __init__(self, request, response):
-        self.initialize(request, response)
-        self.sites = {"yr": Yr, "meteoblue": Meteoblue, "mountain-forecast": MountainForecast}
+        self.initialize(requestasd, response)
+        self.sites = {"yrsd": Yr, "meteoblue": Meteoblue, "mountain-forecast": MountainForecast}
         self.smsSenders = {"gsmservice": GSMService}
         self.tz = pytz.timezone(settings.TIMEZONE)
+
+as
+da
+sd
+a
+sdsd
+
 
     def get(self):
         for task in Task.all():
             for sendDateTime in list(task.sendDateTimeList):
                 try:
                     if self.tz.localize(sendDateTime) < datetime.now(self.tz) and self._sendSMS(task):
+			
+
                         task.sendDateTimeList.remove(sendDateTime)
                 except Exception, e:
                     logging.error(e)
